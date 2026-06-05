@@ -1,51 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>StudyWithUs — Stats</title>
   <link rel="stylesheet" href="styles.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body class="bg-gradient">
   <div class="deco-hearts"></div>
   <div id="toast-container" class="toast-container"></div>
   <nav class="nav">
-    <a href="dashboard.html" class="nav-brand"><span class="bow">🎀</span> StudyWithUs</a>
+    <a href="dashboard.html" class="nav-brand"><span>🎀</span> StudyWithUs</a>
     <div class="nav-links">
-      <a href="dashboard.html" class="nav-link"><span>🏠 </span>Home</a>
-      <a href="stats.html" class="nav-link active"><span>📊 </span>Stats</a>
-      <a href="settings.html" class="nav-link"><span>⚙️ </span>Settings</a>
-      <button class="btn btn-ghost btn-sm" onclick="handleSignOut()">Sign out</button>
+      <a href="dashboard.html" class="nav-link">🏠 Home</a>
+      <a href="stats.html" class="nav-linkactive">📊 Stats</a>
+      <a href="settings.html" class="nav-link">⚙️ Settings</a>
+      <button class="btn btn-ghost btn-sm" onclick="doSignOut()">Sign out</button>
     </div>
   </nav>
   <main class="stats-page">
-    <div class="page-header animate-in"><h1>Your Stats 📊</h1><p>Look how far you've come! Keep it up 💖</p></div>
+    <div class="page-header animate-in">
+      <h1>Your Stats 📊</h1>
+      <p>Look how far you've come! 💖</p>
+    </div>
     <div class="stats-grid animate-in delay-1">
-      <div class="card stat-card"><span class="emoji">🕐</span><div class="big-number" id="stat-total-week">—</div><div class="label">Total this week</div></div>
-      <div class="card stat-card"><span class="emoji">📅</span><div class="big-number" id="stat-daily-avg">—</div><div class="label">Daily average</div></div>
-      <div class="card stat-card"><span class="emoji">🔥</span><div class="big-number" id="stat-streak">—</div><div class="label">Day streak</div></div>
-      <div class="card stat-card"><span class="emoji">📚</span><div class="big-number" id="stat-total-sessions">—</div><div class="label">Sessions this week</div></div>
+      <div class="card stat-card"><span class="emoji">🕐</span><div class="big-number" id="s-week">—</div><div class="label">This week</div></div>
+      <div class="card stat-card"><span class="emoji">📅</span><div class="big-number" id="s-avg">—</div><div class="label">Daily avg</div></div>
+      <div class="card stat-card"><span class="emoji">🔥</span><div class="big-number" id="s-streak">—</div><div class="label">Day streak</div></div>
+      <div class="card stat-card"><span class="emoji">📚</span><div class="big-number" id="s-count">—</div><div class="label">Sessions</div></div>
     </div>
     <div class="card animate-in delay-2">
-      <div class="section-header"><span class="section-title">📈 This Week</span><span class="badge badge-pink" id="week-range"></span></div>
+      <div class="section-header">
+        <span class="section-title">📈 This Week</span>
+        <span class="badge badge-pink" id="week-range"></span>
+      </div>
       <div class="bar-chart" id="bar-chart"></div>
     </div>
-    <div class="card animate-in delay-3"><div class="section-header"><span class="section-title">🗓️ Daily Breakdown</span></div><div id="daily-breakdown"></div></div>
-    <div class="card animate-in delay-3"><div class="section-header"><span class="section-title">🌸 All Sessions (7 days)</span></div><div class="sessions-list" id="all-sessions"></div></div>
+    <div class="card animate-in delay-3">
+      <div class="section-header"><span class="section-title">🗓️ Daily Breakdown</span></div>
+      <div id="daily-list"></div>
+    </div>
+    <div class="card animate-in delay-3">
+      <div class="section-header"><span class="section-title">🌸 All Sessions (7 days)</span></div>
+      <div class="sessions-list" id="all-sessions"></div>
+    </div>
   </main>
   <script src="supabase.js"></script>
   <script src="app.js"></script>
   <script>
-    let currentUser=null;
-    requireAuth(async(user)=>{currentUser=user;await loadStats();});
-    async function loadStats(){try{const sessions=await getRecentSessions(currentUser.id,7);renderSummary(sessions);renderBarChart(sessions);renderDailyBreakdown(sessions);renderAllSessions(sessions);renderWeekRange();}catch(err){console.error("Error loading stats:",err);showToast("Error loading stats. Please try refreshing.","error");}}
-    function renderSummary(sessions){const total=totalMinutes(sessions),days=buildWeeklyBreakdown(sessions),activeDays=days.filter(d=>d.minutes>0).length,avg=activeDays>0?Math.round(total/activeDays):0,streak=calcStreak(days);document.getElementById("stat-total-week").textContent=total>0?formatDuration(total):"0m";document.getElementById("stat-daily-avg").textContent=avg>0?formatDuration(avg):"0m";document.getElementById("stat-streak").textContent=streak+(streak===1?" day":" days");document.getElementById("stat-total-sessions").textContent=sessions.length;}
-    function calcStreak(days){let s=0;for(let i=days.length-1;i>=0;i--){if(days[i].minutes>0)s++;else break;}return s;}
-    function renderBarChart(sessions){const days=buildWeeklyBreakdown(sessions),maxMins=Math.max(...days.map(d=>d.minutes),1),chartEl=document.getElementById("bar-chart");chartEl.innerHTML=days.map(d=>{const hp=(d.minutes/maxMins)*100,hpx=Math.max(4,(hp/100)*130);return`<div class="bar-group"><div class="bar-value">${d.minutes>0?formatDuration(d.minutes):""}</div><div class="bar ${d.isToday?"today":""}" style="height:${hpx}px" title="${d.dayLabel}: ${formatDuration(d.minutes)}"></div><div class="bar-label">${d.dayLabel}</div></div>`;}).join("");}
-    function renderDailyBreakdown(sessions){const days=buildWeeklyBreakdown(sessions),el=document.getElementById("daily-breakdown");el.innerHTML=[...days].reverse().map(d=>{const cnt=sessions.filter(s=>s.date===d.dateStr).length;return`<div class="session-item"><div><div class="session-date">${d.dayLabel}${d.isToday?" (Today)":""}</div><div class="session-time">${d.minutes>0?cnt+" session"+(cnt!==1?"s":""):"No sessions"}</div></div><div class="session-duration">${d.minutes>0?formatDuration(d.minutes):"—"}</div></div>`;}).join("");}
-    function renderAllSessions(sessions){const el=document.getElementById("all-sessions");if(!sessions.length){el.innerHTML="<div class='sessions-empty'>No sessions this week yet. Start studying to see your progress! 🌷</div>";return;}el.innerHTML=sessions.map(s=>`<div class="session-item"><div><div class="session-date">${s.date||"—"}</div><div class="session-time">${s.startTimeLabel||""}${s.endTimeLabel?" → "+s.endTimeLabel:""}</div></div><div class="session-duration">${formatDuration(s.duration||0)}</div></div>`).join("");}
-    function renderWeekRange(){const today=new Date(),start=new Date(today);start.setDate(today.getDate()-6);document.getElementById("week-range").textContent=start.toLocaleDateString([],{month:"short",day:"numeric"})+" – "+today.toLocaleDateString([],{month:"short",day:"numeric"});}
-    async function handleSignOut(){await signOut();window.location.href="index.html";}
+    let _user = null;
+    requireAuth(async user => { _user = user; await loadStats(); });
+
+    async function loadStats() {
+      try {
+        const sessions = await getRecentSessions(_user.id, 7);
+        renderSummary(sessions); renderChart(sessions);
+        renderDailyList(sessions); renderAllSessions(sessions); renderWeekRange();
+      } catch(e) { _toast("Error loading stats. Please refresh.","error"); }
+    }
+
+    function renderSummary(sessions) {
+      const days = buildWeeklyBreakdown(sessions);
+      const total = totalMinutes(sessions);
+      const active = days.filter(d=>d.minutes>0).length;
+      const avg = active>0 ? Math.round(total/active) : 0;
+      let streak=0;
+      for (let i=days.length-1;i>=0;i--) { if(days[i].minutes>0)streak++; else break; }
+      document.getElementById("s-week").textContent   = total>0 ? formatDuration(total) : "0m";
+      document.getElementById("s-avg").textContent    = avg>0   ? formatDuration(avg)   : "0m";
+      document.getElementById("s-streak").textContent = streak+(streak===1?" day":" days");
+      document.getElementById("s-count").textContent  = sessions.length;
+    }
+
+    function renderChart(sessions) {
+      const days = buildWeeklyBreakdown(sessions);
+      const max  = Math.max(...days.map(d=>d.minutes), 1);
+      document.getElementById("bar-chart").innerHTML = days.map(d => {
+        const h = Math.max(4, (d.minutes/max)*130);
+        return `<div class="bar-group">
+          <div class="bar-value">${d.minutes>0?formatDuration(d.minutes):""}</div>
+          <div class="bar${d.isToday?" today":""}" style="height:${h}px"
+            title="${d.dayLabel}: ${formatDuration(d.minutes)}"></div>
+          <div class="bar-label">${d.dayLabel}</div>
+        </div>`;
+      }).join("");
+    }
+
+    function renderDailyList(sessions) {
+      const days = buildWeeklyBreakdown(sessions);
+      document.getElementById("daily-list").innerHTML = [...days].reverse().map(d => {
+        const cnt = sessions.filter(s=>s.date===d.dateStr).length;
+        return `<div class="session-item">
+          <div><div class="session-date">${d.dayLabel}${d.isToday?" (Today)":""}</div>
+          <div class="session-time">${d.minutes>0?cnt+" session"+(cnt!==1?"s":""):"No sessions"}</div></div>
+          <div class="session-duration">${d.minutes>0?formatDuration(d.minutes):"—"}</div>
+        </div>`;
+      }).join("");
+    }
+
+    function renderAllSessions(sessions) {
+      const el = document.getElementById("all-sessions");
+      if (!sessions.length) { el.innerHTML=`<div class="sessions-empty">No sessions yet this week 🌷</div>`; return; }
+      el.innerHTML = sessions.map(s =>
+        `<div class="session-item">
+          <div><div class="session-date">${s.date||"—"}</div>
+          <div class="session-time">${s.startTimeLabel}${s.endTimeLabel?" → "+s.endTimeLabel:""}</div></div>
+          <div class="session-duration">${formatDuration(s.duration)}</div>
+        </div>`).join("");
+    }
+
+    function renderWeekRange() {
+      const t=new Date(), s=new Date(t); s.setDate(t.getDate()-6);
+      document.getElementById("week-range").textContent =
+        s.toLocaleDateString([],{month:"short",day:"numeric"})+" – "+
+        t.toLocaleDateString([],{month:"short",day:"numeric"});
+    }
+
+    async function doSignOut() { await signOut(); window.location.href="index.html"; }
   </script>
 </body>
 </html>
