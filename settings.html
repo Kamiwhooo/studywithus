@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StudyWithUs — Settings</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gradient">
+  <div class="deco-hearts"></div>
+  <div id="toast-container" class="toast-container"></div>
+  <nav class="nav">
+    <a href="dashboard.html" class="nav-brand"><span class="bow">🎀</span> StudyWithUs</a>
+    <div class="nav-links">
+      <a href="dashboard.html" class="nav-link"><span>🏠 </span>Home</a>
+      <a href="stats.html" class="nav-link"><span>📊 </span>Stats</a>
+      <a href="settings.html" class="nav-link active"><span>⚙️ </span>Settings</a>
+      <button class="btn btn-ghost btn-sm" onclick="handleSignOut()">Sign out</button>
+    </div>
+  </nav>
+  <main class="settings-page">
+    <div class="page-header animate-in"><h1>Settings ⚙️</h1><p>Customize your StudyWithUs experience 💖</p></div>
+    <div class="card animate-in delay-1" style="margin-bottom:1.5rem">
+      <h3 style="margin-bottom:1.2rem">👤 Profile</h3>
+      <div class="avatar-row">
+        <div class="avatar-preview" id="avatar-preview"><span id="avatar-initials">?</span><img id="avatar-img" src="" alt="Avatar" style="display:none"/></div>
+        <div><p style="font-size:0.85rem;color:var(--text-soft);margin-bottom:0.5rem">Upload a profile picture (stored in Supabase Storage)</p><label class="btn btn-secondary btn-sm" style="cursor:pointer">📷 Choose Photo<input type="file" id="avatar-file" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)"/></label></div>
+      </div>
+      <div class="input-group" style="margin-top:1.2rem"><label>Display Name</label><input type="text" id="display-name" placeholder="Your name"/></div>
+      <div class="input-group"><label>Your Email</label><input type="email" id="user-email" placeholder="you@example.com" disabled style="opacity:0.65;cursor:not-allowed"/></div>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+    </div>
+    <div class="card animate-in delay-2" style="margin-bottom:1.5rem">
+      <h3 style="margin-bottom:0.2rem">📧 Email Notifications</h3>
+      <p style="font-size:0.85rem;color:var(--text-soft);margin-bottom:1.2rem">Send study session updates to your accountability partner via Resend.</p>
+      <div class="setting-item">
+        <div class="setting-info"><h4>Send email updates to partner</h4><p>Notify your partner when you start and finish studying</p></div>
+        <label class="toggle-switch"><input type="checkbox" id="toggle-email" onchange="handleEmailToggle()"/><span class="toggle-track"></span></label>
+      </div>
+      <div id="partner-email-section" style="margin-top:1.2rem;display:none">
+        <div class="input-group"><label>Partner's Email Address</label><input type="email" id="partner-email" placeholder="partner@example.com"/></div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveNotifications()">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="sendTestEmail()">Send Test Email</button>
+        </div>
+      </div>
+    </div>
+    <div class="card animate-in delay-3" style="margin-bottom:1.5rem">
+      <h3 style="margin-bottom:0.8rem">💖 About StudyWithUs</h3>
+      <p style="font-size:0.9rem;color:var(--text-soft);line-height:1.7">StudyWithUs is your cute, motivating study tracker. Built with Supabase, Resend, Vercel, and a whole lot of pink 🎀</p>
+    </div>
+    <div class="danger-zone animate-in delay-3">
+      <h3 style="color:#c9184a;margin-bottom:0.5rem">⚠️ Danger Zone</h3>
+      <p style="font-size:0.85rem;color:var(--text-soft);margin-bottom:1rem">These actions are permanent and cannot be undone.</p>
+      <button class="btn btn-danger btn-sm" onclick="confirmSignOut()">Sign Out of All Devices</button>
+    </div>
+  </main>
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let currentUser=null;
+    requireAuth(async(user)=>{currentUser=user;await loadSettings();});
+    async function loadSettings(){const s=await getSettings(currentUser.id);document.getElementById("display-name").value=s.displayName||"";document.getElementById("user-email").value=currentUser.email;document.getElementById("partner-email").value=s.partnerEmail||"";document.getElementById("toggle-email").checked=s.emailUpdates;togglePartnerSection(s.emailUpdates);renderAvatar(s.displayName||currentUser.email,s.avatarUrl);}
+    function renderAvatar(name,avatarUrl){const initials=document.getElementById("avatar-initials"),img=document.getElementById("avatar-img");if(avatarUrl){img.src=avatarUrl;img.style.display="block";initials.style.display="none";}else{const parts=name.trim().split(" ");initials.textContent=parts.map(p=>p[0]).join("").toUpperCase().slice(0,2);img.style.display="none";initials.style.display="block";}}
+    async function handleAvatarUpload(event){const file=event.target.files[0];if(!file)return;if(!file.type.startsWith("image/")){showToast("Please choose an image file 🌸","error");return;}if(file.size>2*1024*1024){showToast("Image must be under 2MB 🌸","error");return;}showToast("Uploading photo… ✨","info");try{const ext=file.name.split(".").pop(),path="avatars/"+currentUser.id+"."+ext;const{error:upErr}=await _supabase.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type});if(upErr)throw upErr;const{data}=_supabase.storage.from("avatars").getPublicUrl(path);const avatarUrl=data.publicUrl+"?t="+Date.now();await saveSettings(currentUser.id,{avatarUrl});renderAvatar("",avatarUrl);showToast("Profile photo updated 💖","success");}catch(err){console.error("Avatar upload error:",err);showToast("Upload failed. Check Supabase Storage is configured.","error");}}
+    function handleEmailToggle(){togglePartnerSection(document.getElementById("toggle-email").checked);}
+    function togglePartnerSection(show){document.getElementById("partner-email-section").style.display=show?"block":"none";}
+    async function saveProfile(){const name=document.getElementById("display-name").value.trim();if(!name){showToast("Please enter a display name.","error");return;}try{await saveSettings(currentUser.id,{displayName:name});showToast("Profile saved! 🌸","success");}catch(err){showToast("Error saving profile. Please try again.","error");}}
+    async function saveNotifications(){const emailUpdates=document.getElementById("toggle-email").checked,partnerEmail=document.getElementById("partner-email").value.trim(),validEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;if(emailUpdates&&!validEmail.test(partnerEmail)){showToast("Please enter a valid email address.","error");return;}try{await saveSettings(currentUser.id,{emailUpdates,partnerEmail});showToast("Notification settings saved 💖","success");}catch(err){showToast("Error saving settings. Please try again.","error");}}
+    async function sendTestEmail(){const partnerEmail=document.getElementById("partner-email").value.trim();if(!partnerEmail){showToast("Enter a partner email first!","error");return;}showToast("Sending test email… ✨","info");try{const name=document.getElementById("display-name").value.trim()||currentUser.email.split("@")[0];const html=buildEmailHtml(name,"Test Email from StudyWithUs 🌸",["Hi! This is a test notification from <strong>StudyWithUs</strong>.","<div class=\"highlight\">✅ Email notifications are working perfectly!</div>","You'll receive messages like this when "+name+" starts or finishes studying. 📚"]);await sendEmail(partnerEmail,"StudyWithUs Test Email 🌸",html);showToast("Test email sent successfully 📧","success");}catch(err){console.error(err);showToast("Email failed. Is the Edge Function deployed? See SETUP.md","error");}}
+    function confirmSignOut(){if(confirm("Are you sure you want to sign out? Your data is safely stored in Supabase 🌸"))handleSignOut();}
+    async function handleSignOut(){await signOut();window.location.href="index.html";}
+  </script>
+</body>
+</html>
