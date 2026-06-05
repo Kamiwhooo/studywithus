@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>StudyWithUs — Sign In</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <!-- 1. Supabase SDK must load first, synchronously -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body class="bg-gradient">
   <div class="deco-hearts"></div>
   <div id="toast-container" class="toast-container"></div>
+
   <div class="auth-page">
     <div class="auth-card card animate-in">
       <div class="auth-header">
@@ -17,95 +21,166 @@
         <h1>StudyWithUs</h1>
         <p>Your cozy study accountability partner 💖</p>
       </div>
+
       <div id="auth-msg" class="auth-msg hidden"></div>
+
+      <!-- SIGN IN -->
       <div id="signin-form">
         <div class="input-group">
-          <label for="signin-email">Email</label>
-          <input type="email" id="signin-email" placeholder="you@example.com" autocomplete="email" />
+          <label for="si-email">Email</label>
+          <input type="email" id="si-email" placeholder="you@example.com" autocomplete="email"/>
         </div>
         <div class="input-group">
-          <label for="signin-password">Password</label>
-          <input type="password" id="signin-password" placeholder="••••••••" autocomplete="current-password" />
+          <label for="si-pass">Password</label>
+          <input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password"/>
         </div>
-        <button id="btn-signin" class="btn btn-primary w-full btn-lg" onclick="handleSignIn()">Sign In ✨</button>
+        <button id="btn-signin" class="btn btn-primary w-full btn-lg" onclick="doSignIn()">Sign In ✨</button>
         <div class="auth-divider">or</div>
-        <button class="btn btn-google w-full" onclick="handleGoogleSignIn()">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        <button class="btn btn-google w-full" onclick="doGoogleSignIn()">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
           Continue with Google
         </button>
-        <div class="auth-footer mt-2">Don't have an account? <a href="#" onclick="toggleForm(event)">Create one 🌸</a></div>
+        <div class="auth-footer mt-2">No account? <a href="#" onclick="switchForm(event)">Create one 🌸</a></div>
       </div>
+
+      <!-- SIGN UP -->
       <div id="signup-form" class="hidden">
         <div class="input-group">
-          <label for="signup-name">Your Name</label>
-          <input type="text" id="signup-name" placeholder="What should we call you?" />
+          <label for="su-name">Your Name</label>
+          <input type="text" id="su-name" placeholder="What should we call you?"/>
         </div>
         <div class="input-group">
-          <label for="signup-email">Email</label>
-          <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" />
+          <label for="su-email">Email</label>
+          <input type="email" id="su-email" placeholder="you@example.com" autocomplete="email"/>
         </div>
         <div class="input-group">
-          <label for="signup-password">Password</label>
-          <input type="password" id="signup-password" placeholder="Min 6 characters" autocomplete="new-password" />
+          <label for="su-pass">Password</label>
+          <input type="password" id="su-pass" placeholder="Min 6 characters" autocomplete="new-password"/>
         </div>
-        <button id="btn-signup" class="btn btn-primary w-full btn-lg" onclick="handleSignUp()">Create Account 💖</button>
+        <button id="btn-signup" class="btn btn-primary w-full btn-lg" onclick="doSignUp()">Create Account 💖</button>
         <div class="auth-divider">or</div>
-        <button class="btn btn-google w-full" onclick="handleGoogleSignIn()">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        <button class="btn btn-google w-full" onclick="doGoogleSignIn()">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
           Continue with Google
         </button>
-        <div class="auth-footer mt-2">Already have an account? <a href="#" onclick="toggleForm(event)">Sign in ✨</a></div>
+        <div class="auth-footer mt-2">Have an account? <a href="#" onclick="switchForm(event)">Sign in ✨</a></div>
       </div>
     </div>
   </div>
+
   <script src="supabase.js"></script>
   <script src="app.js"></script>
   <script>
+    // Auto-redirect if already signed in
     (async () => {
-      const session = await getSession();
-      if (session && session.user && session.user.email_confirmed_at) window.location.href = "dashboard.html";
+      try {
+        const s = await getSession();
+        if (s?.user) window.location.replace("dashboard.html");
+      } catch(e) {}
     })();
-    onAuthChange(async (event, session) => {
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session && session.user.email_confirmed_at) window.location.href = "dashboard.html";
+
+    // Handle OAuth redirect (Google sends user back here with hash)
+    onAuthChange((event, session) => {
+      if ((event === "SIGNED_IN") && session?.user) {
+        window.location.replace("dashboard.html");
+      }
     });
-    function toggleForm(e) { if (e) e.preventDefault(); document.getElementById("signin-form").classList.toggle("hidden"); document.getElementById("signup-form").classList.toggle("hidden"); hideMsg(); }
-    function showMsg(msg, type = "error") { const el = document.getElementById("auth-msg"); el.textContent = msg; el.className = "auth-msg auth-msg-" + type; el.classList.remove("hidden"); }
-    function hideMsg() { document.getElementById("auth-msg").classList.add("hidden"); }
-    async function handleSignIn() {
+
+    function switchForm(e) {
+      e.preventDefault();
+      document.getElementById("signin-form").classList.toggle("hidden");
+      document.getElementById("signup-form").classList.toggle("hidden");
       hideMsg();
-      const email = document.getElementById("signin-email").value.trim();
-      const password = document.getElementById("signin-password").value;
-      const btn = document.getElementById("btn-signin");
-      if (!email || !password) { showMsg("Please fill in all fields."); return; }
-      btn.disabled = true; btn.textContent = "Signing in…";
-      try { await signIn(email, password); }
-      catch (err) { showMsg(friendlyAuthError(err)); btn.disabled = false; btn.textContent = "Sign In ✨"; }
     }
-    async function handleSignUp() {
+
+    function showMsg(msg, type="error") {
+      const el = document.getElementById("auth-msg");
+      el.textContent = msg;
+      el.className = "auth-msg auth-msg-" + type;
+    }
+    function hideMsg() {
+      const el = document.getElementById("auth-msg");
+      el.className = "auth-msg hidden";
+    }
+
+    async function doSignIn() {
       hideMsg();
-      const name = document.getElementById("signup-name").value.trim();
-      const email = document.getElementById("signup-email").value.trim();
-      const password = document.getElementById("signup-password").value;
+      const email = document.getElementById("si-email").value.trim();
+      const pass  = document.getElementById("si-pass").value;
+      if (!email || !pass) { showMsg("Please fill in all fields."); return; }
+      const btn = document.getElementById("btn-signin");
+      btn.disabled = true; btn.textContent = "Signing in…";
+      try {
+        await signIn(email, pass);
+        // onAuthChange handles redirect
+      } catch(err) {
+        showMsg(authErrMsg(err));
+        btn.disabled = false; btn.textContent = "Sign In ✨";
+      }
+    }
+
+    async function doSignUp() {
+      hideMsg();
+      const name  = document.getElementById("su-name").value.trim();
+      const email = document.getElementById("su-email").value.trim();
+      const pass  = document.getElementById("su-pass").value;
+      if (!name||!email||!pass) { showMsg("Please fill in all fields."); return; }
+      if (pass.length < 6) { showMsg("Password must be at least 6 characters."); return; }
       const btn = document.getElementById("btn-signup");
-      if (!name || !email || !password) { showMsg("Please fill in all fields."); return; }
-      if (password.length < 6) { showMsg("Password must be at least 6 characters."); return; }
       btn.disabled = true; btn.textContent = "Creating…";
       try {
-        const data = await signUp(email, password);
-        if (data.user) await saveSettings(data.user.id, { displayName: name, emailUpdates: true, partnerEmail: "" });
-        showMsg("🌸 Account created! Please check your inbox to verify your email before signing in.", "info");
+        const data = await signUp(email, pass);
+        if (data.user) {
+          await saveSettings(data.user.id, { displayName: name, emailUpdates: true, partnerEmail: "" });
+        }
+        // Supabase may auto-confirm or require email verification
+        if (data.session) {
+          window.location.replace("dashboard.html");
+        } else {
+          showMsg("🌸 Check your inbox to verify your email, then sign in!", "info");
+          btn.disabled = false; btn.textContent = "Create Account 💖";
+        }
+      } catch(err) {
+        showMsg(authErrMsg(err));
         btn.disabled = false; btn.textContent = "Create Account 💖";
-      } catch (err) { showMsg(friendlyAuthError(err)); btn.disabled = false; btn.textContent = "Create Account 💖"; }
+      }
     }
-    async function handleGoogleSignIn() { hideMsg(); try { await signInWithGoogle(); } catch (err) { showMsg("Google sign-in failed. Please try again."); } }
-    document.addEventListener("keydown", (e) => { if (e.key !== "Enter") return; const sv = !document.getElementById("signin-form").classList.contains("hidden"); if (sv) handleSignIn(); else handleSignUp(); });
-    function friendlyAuthError(err) {
-      const msg = (err.message || "").toLowerCase(), code = err.code || "";
-      if (code === "auth/email-not-verified" || msg.includes("not verified")) return "📬 Please verify your email before signing in. Check your inbox!";
-      if (msg.includes("invalid login") || msg.includes("invalid credentials")) return "Incorrect email or password. Give it another go! 💕";
-      if (msg.includes("user already registered") || msg.includes("already in use")) return "That email is already registered. Sign in instead! ✨";
-      if (msg.includes("invalid email")) return "That doesn't look like a valid email.";
-      if (msg.includes("too many requests") || msg.includes("rate limit")) return "Too many attempts. Please try again in a moment.";
+
+    async function doGoogleSignIn() {
+      hideMsg();
+      try {
+        await signInWithGoogle();
+        // Supabase redirects automatically
+      } catch(err) {
+        showMsg("Google sign-in failed: " + err.message);
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Enter") return;
+      const onSignin = !document.getElementById("signin-form").classList.contains("hidden");
+      if (onSignin) doSignIn(); else doSignUp();
+    });
+
+    function authErrMsg(err) {
+      const m = (err.message || "").toLowerCase();
+      if (m.includes("invalid login") || m.includes("invalid credentials") || m.includes("wrong password"))
+        return "Wrong email or password. Try again! 💕";
+      if (m.includes("user already registered") || m.includes("already in use"))
+        return "That email is taken. Sign in instead! ✨";
+      if (m.includes("invalid email")) return "Please enter a valid email.";
+      if (m.includes("rate limit") || m.includes("too many")) return "Too many attempts. Wait a moment.";
+      if (m.includes("email not confirmed")) return "📬 Please verify your email first, then sign in.";
       return err.message || "Something went wrong. Please try again.";
     }
   </script>
