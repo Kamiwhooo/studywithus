@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StudyWithUs — Dashboard</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gradient">
+  <div class="deco-hearts"></div>
+  <div id="toast-container" class="toast-container"></div>
+  <nav class="nav">
+    <a href="dashboard.html" class="nav-brand"><span class="bow">🎀</span> StudyWithUs</a>
+    <div class="nav-links">
+      <a href="dashboard.html" class="nav-link active"><span>🏠 </span>Home</a>
+      <a href="stats.html" class="nav-link"><span>📊 </span>Stats</a>
+      <a href="settings.html" class="nav-link"><span>⚙️ </span>Settings</a>
+      <button class="btn btn-ghost btn-sm" onclick="handleSignOut()">Sign out</button>
+    </div>
+  </nav>
+  <main class="dashboard-page">
+    <div class="greeting animate-in">
+      <h2 id="greeting-text">Hello 💖</h2>
+      <p id="greeting-date"></p>
+    </div>
+    <div class="card timer-card animate-in delay-1">
+      <div class="timer-display" id="timer-display">00:00:00</div>
+      <div class="timer-status" id="timer-status">Ready to study? Let's go! 🌸</div>
+      <div class="timer-controls">
+        <button id="btn-start" disabled class="btn btn-primary btn-lg" onclick="startStudy()">▶ Start Study</button>
+        <button id="btn-stop" class="btn btn-danger btn-lg hidden" onclick="stopStudy()">⏹ Stop Study</button>
+      </div>
+      <p class="motivational" id="motivational-quote"></p>
+    </div>
+    <div class="quick-stats">
+      <div class="card stat-mini animate-in delay-1"><span class="stat-icon">📅</span><div class="stat-value" id="stat-today">—</div><div class="stat-label">Today</div></div>
+      <div class="card stat-mini animate-in delay-2"><span class="stat-icon">📆</span><div class="stat-value" id="stat-week">—</div><div class="stat-label">This Week</div></div>
+      <div class="card stat-mini animate-in delay-3"><span class="stat-icon">🏆</span><div class="stat-value" id="stat-sessions">—</div><div class="stat-label">Sessions</div></div>
+    </div>
+    <div class="card animate-in delay-2">
+      <div class="section-header"><span class="section-title">🌸 Recent Sessions</span><a href="stats.html" class="btn btn-ghost btn-sm">View all →</a></div>
+      <div class="sessions-list" id="sessions-list"><div class="sessions-empty">Loading your sessions… ✨</div></div>
+    </div>
+    <div class="card goals-card animate-in delay-3">
+      <div class="section-header"><span class="section-title">🎀 Today's Goals</span><span class="goals-summary-badge"><span id="goals-done">0</span>/<span id="goals-total">0</span> done</span></div>
+      <div class="goals-progress-track"><div class="goals-progress-bar" id="goals-progress-bar"></div></div>
+      <div class="goals-progress-label"><span id="goals-pct">0%</span> complete ✨</div>
+      <div class="goals-input-row">
+        <input type="text" id="goal-input" class="goals-input" placeholder="Add a goal for today… 🌸" maxlength="120" aria-label="New goal text" onkeydown="if(event.key==='Enter') handleAddGoal()"/>
+        <button class="btn btn-primary goals-add-btn" onclick="handleAddGoal()" aria-label="Add goal">+ Add</button>
+      </div>
+      <ul class="goals-list" id="goals-list" aria-label="Today's goals">
+        <div class="goals-empty"><span class="goals-empty-icon">🌸</span><p>Add your first goal for today!</p><p class="goals-empty-sub">Every big achievement starts with one small step ✨</p></div>
+      </ul>
+    </div>
+  </main>
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let currentUser=null,userSettings={},currentSessions=[];
+    requireAuth(async(user)=>{currentUser=user;userSettings=await getSettings(user.id);document.getElementById("btn-start").disabled=false;renderGreeting();renderMotivational();await loadSessions();await restoreActiveSession();await loadGoals(user.id);});
+    function renderGreeting(){const name=userSettings.displayName||currentUser.email.split("@")[0];const hour=new Date().getHours();const greeting=hour<12?"Good morning":hour<17?"Good afternoon":"Good evening";document.getElementById("greeting-text").textContent=greeting+", "+name+"! 💖";document.getElementById("greeting-date").textContent=new Date().toLocaleDateString([],{weekday:"long",year:"numeric",month:"long",day:"numeric"});}
+    function renderMotivational(){document.getElementById("motivational-quote").textContent=getMotivationalQuote();}
+    async function loadSessions(){try{currentSessions=await getLatestSessions(currentUser.id,10);renderSessionsList();renderQuickStats();}catch(err){console.error("Failed to load sessions:",err);document.getElementById("sessions-list").innerHTML="<div class='sessions-empty'>Could not load sessions. Please refresh. 🌸</div>";}}
+    function renderSessionsList(){const el=document.getElementById("sessions-list");if(!currentSessions.length){el.innerHTML="<div class='sessions-empty'>No sessions yet — start your first study now! 🌷</div>";return;}el.innerHTML=currentSessions.map(s=>`<div class="session-item"><div><div class="session-date">${s.date||"—"}</div><div class="session-time">${s.startTimeLabel||""}${s.endTimeLabel?" → "+s.endTimeLabel:""}</div></div><div class="session-duration">${formatDuration(s.duration||0)}</div></div>`).join("");}
+    function renderQuickStats(){const todayStr=new Date().toISOString().split("T")[0];const todayMin=currentSessions.filter(s=>s.date===todayStr).reduce((sum,s)=>sum+(s.duration||0),0);const weekMin=currentSessions.reduce((sum,s)=>sum+(s.duration||0),0);document.getElementById("stat-today").textContent=formatDuration(todayMin);document.getElementById("stat-week").textContent=formatDuration(weekMin);document.getElementById("stat-sessions").textContent=currentSessions.length;}
+    async function restoreActiveSession(){try{const active=await getActiveSession(currentUser.id);if(active&&active.startTime){sessionStart=new Date(active.startTime);isStudying=true;setStudyingUI(true);startTimerUI(sessionStart,document.getElementById("timer-display"));showToast("Restored your ongoing study session 🌸","info");}}catch(err){console.warn("Could not restore active session:",err);}}
+    function setStudyingUI(studying){const startBtn=document.getElementById("btn-start"),stopBtn=document.getElementById("btn-stop"),statusEl=document.getElementById("timer-status");if(studying){startBtn.classList.add("hidden");stopBtn.classList.remove("hidden");statusEl.innerHTML="<span class='timer-pulse'></span>Study session in progress…";statusEl.classList.add("active");}else{startBtn.classList.remove("hidden");stopBtn.classList.add("hidden");statusEl.textContent="Ready to study? Let's go! 🌸";statusEl.classList.remove("active");}}
+    async function startStudy(){if(isStudying)return;if(!currentUser){showToast("Still loading your account. Please wait 🌸","error");return;}const startBtn=document.getElementById("btn-start");startBtn.disabled=true;try{sessionStart=new Date();isStudying=true;await saveActiveSession(currentUser.id,sessionStart.toISOString());setStudyingUI(true);startTimerUI(sessionStart,document.getElementById("timer-display"));renderMotivational();if(userSettings.emailUpdates&&userSettings.partnerEmail){const name=userSettings.displayName||currentUser.email.split("@")[0];const html=buildEmailHtml(name,"Study Session Started 🌸",[`<strong>${name}</strong> just started a study session! 📚`,`<div class="highlight">🕐 Started at: <strong>${formatTime(sessionStart)}</strong></div>`,"Wish them luck and stay accountable together 💪"]);sendEmail(userSettings.partnerEmail,name+" started studying 🌸",html).catch(err=>console.warn("Email failed:",err));}showToast("Study session started! Stay focused 💖","success");}catch(err){console.error("Failed to start session:",err);showToast("Could not start session. Please try again.","error");isStudying=false;setStudyingUI(false);}finally{startBtn.disabled=false;}}
+    async function stopStudy(){if(!isStudying||!sessionStart)return;const stopBtn=document.getElementById("btn-stop");stopBtn.disabled=true;const endTime=new Date();const durationMin=Math.max(1,Math.round((endTime-sessionStart)/60000));isStudying=false;stopTimerUI();setStudyingUI(false);document.getElementById("timer-display").textContent="00:00:00";const sessionData={startTime:sessionStart.toISOString(),endTime:endTime.toISOString(),startTimeLabel:formatTime(sessionStart),endTimeLabel:formatTime(endTime),date:sessionStart.toISOString().split("T")[0],duration:durationMin};try{await saveSession(currentUser.id,sessionData);await clearActiveSession(currentUser.id);await loadSessions();showToast("Great session! You studied for "+formatDuration(durationMin)+" 🎉","success");if(userSettings.emailUpdates&&userSettings.partnerEmail){const name=userSettings.displayName||currentUser.email.split("@")[0];const html=buildEmailHtml(name,"Study Session Complete 🎉",[`<strong>${name}</strong> just finished a study session! 🎉`,`<div class="highlight">📅 Date: <strong>${sessionData.date}</strong><br/>🕐 From: <strong>${sessionData.startTimeLabel}</strong> → <strong>${sessionData.endTimeLabel}</strong><br/>⏱️ Total: <strong>${formatDuration(durationMin)}</strong></div>`,"Amazing work! Keep up the incredible momentum 💪✨"]);sendEmail(userSettings.partnerEmail,name+" finished a study session 🎉",html).catch(err=>console.warn("Email failed:",err));}}catch(err){console.error("Save error:",err);showToast("Session sync failed — check your connection.","error");}finally{stopBtn.disabled=false;sessionStart=null;}}
+    async function handleSignOut(){await signOut();window.location.href="index.html";}
+    async function handleAddGoal(){const input=document.getElementById("goal-input"),text=input.value.trim();if(!text){input.focus();return;}input.value="";await addGoal(currentUser.id,text);input.focus();}
+  </script>
+</body>
+</html>
