@@ -12,17 +12,18 @@
 <body class="bg-gradient">
   <div class="deco-hearts"></div>
   <div id="toast-container" class="toast-container"></div>
+
   <nav class="nav">
     <a href="dashboard.html" class="nav-brand"><span>🎀</span> StudyWithUs</a>
     <div class="nav-links">
-      <a href="dashboard.html" class="nav-linkactive">🏠 Home</a>
+      <a href="dashboard.html" class="nav-link active">🏠 Home</a>
       <a href="stats.html" class="nav-link">📊 Stats</a>
       <a href="settings.html" class="nav-link">⚙️ Settings</a>
       <button class="btn btn-ghost btn-sm" onclick="doSignOut()">Sign out</button>
     </div>
   </nav>
-  <main class="dashboard-page">
 
+  <main class="dashboard-page">
     <div class="greeting animate-in">
       <h2 id="greeting-text">Hello 💖</h2>
       <p id="greeting-date"></p>
@@ -74,13 +75,13 @@
       <div class="goals-progress-track"><div class="goals-progress-bar" id="goals-progress-bar"></div></div>
       <div class="goals-progress-label"><span id="goals-pct">0%</span> complete ✨</div>
       <div class="goals-input-row">
-        <input type="text" id="goal-input" class="goals-input" placeholder="Add a goal for today… 🌸"
-          maxlength="120" onkeydown="if(event.key==='Enter')handleAddGoal()"/>
+        <input type="text" id="goal-input" class="goals-input"
+          placeholder="Add a goal for today… 🌸" maxlength="120"
+          onkeydown="if(event.key==='Enter')handleAddGoal()"/>
         <button class="btn btn-primary goals-add-btn" onclick="handleAddGoal()">+ Add</button>
       </div>
       <ul class="goals-list" id="goals-list"></ul>
     </div>
-
   </main>
 
   <script src="supabase.js"></script>
@@ -92,19 +93,17 @@
       _user = user;
       _settings = await getSettings(user.id);
       document.getElementById("btn-start").disabled = false;
-      renderGreeting();
-      document.getElementById("motivational-quote").textContent = getMotivationalQuote();
-      await Promise.all([loadSessions(), restoreSession(), loadGoals(user.id)]);
-    });
 
-    function renderGreeting() {
-      const name = _settings.displayName || _user.email.split("@")[0];
       const h = new Date().getHours();
-      const g = h<12?"Good morning":h<17?"Good afternoon":"Good evening";
-      document.getElementById("greeting-text").textContent = g+", "+name+"! 💖";
+      const name = _settings.displayName || user.email.split("@")[0];
+      document.getElementById("greeting-text").textContent =
+        (h<12?"Good morning":h<17?"Good afternoon":"Good evening")+", "+name+"! 💖";
       document.getElementById("greeting-date").textContent =
         new Date().toLocaleDateString([],{weekday:"long",year:"numeric",month:"long",day:"numeric"});
-    }
+      document.getElementById("motivational-quote").textContent = getMotivationalQuote();
+
+      await Promise.all([loadSessions(), restoreSession(), loadGoals(user.id)]);
+    });
 
     async function loadSessions() {
       try {
@@ -112,19 +111,22 @@
         renderSessions(); renderStats();
       } catch(e) {
         document.getElementById("sessions-list").innerHTML =
-          `<div class="sessions-empty">Could not load sessions 🌸</div>`;
+          `<div class="sessions-empty">Could not load sessions — refresh to try again 🌸</div>`;
       }
     }
 
     function renderSessions() {
       const el = document.getElementById("sessions-list");
       if (!_sessions.length) {
-        el.innerHTML = `<div class="sessions-empty">No sessions yet — start studying! 🌷</div>`; return;
+        el.innerHTML = `<div class="sessions-empty">No sessions yet — start studying! 🌷</div>`;
+        return;
       }
       el.innerHTML = _sessions.map(s =>
         `<div class="session-item">
-          <div><div class="session-date">${s.date||"—"}</div>
-          <div class="session-time">${s.startTimeLabel}${s.endTimeLabel?" → "+s.endTimeLabel:""}</div></div>
+          <div>
+            <div class="session-date">${s.date||"—"}</div>
+            <div class="session-time">${s.startTimeLabel}${s.endTimeLabel?" → "+s.endTimeLabel:""}</div>
+          </div>
           <div class="session-duration">${formatDuration(s.duration)}</div>
         </div>`).join("");
     }
@@ -142,12 +144,13 @@
       try {
         const a = await getActiveSession(_user.id);
         if (a?.startTime) {
-          sessionStart = new Date(a.startTime); isStudying = true;
+          sessionStart = new Date(a.startTime);
+          isStudying = true;
           setStudyUI(true);
           startTimerUI(sessionStart, document.getElementById("timer-display"));
-          _toast("Restored your ongoing session 🌸","info");
+          _toast("Restored your ongoing session 🌸", "info");
         }
-      } catch(e) {}
+      } catch(e) { console.warn("Restore session error:", e); }
     }
 
     function setStudyUI(on) {
@@ -168,24 +171,30 @@
       const btn = document.getElementById("btn-start");
       btn.disabled = true;
       try {
-        sessionStart = new Date(); isStudying = true;
+        sessionStart = new Date();
+        isStudying = true;
         await saveActiveSession(_user.id, sessionStart.toISOString());
         setStudyUI(true);
         startTimerUI(sessionStart, document.getElementById("timer-display"));
         document.getElementById("motivational-quote").textContent = getMotivationalQuote();
-        _toast("Study session started! 💖","success");
-        if (_settings.emailUpdates && _settings.partnerEmail) {
-          const name = _settings.displayName || _user.email.split("@")[0];
-          sendStudyEmail(_settings.partnerEmail,
-            name+" started studying 🌸",
-            buildEmailHtml(name,"Study Session Started 🌸",[
-              `<strong>${name}</strong> just started a study session! 📚`,
-              `<div class="hl">🕐 Started: <strong>${formatTime(sessionStart)}</strong></div>`
-            ])
-          ).catch(()=>{});
-        }
+        _toast("Study session started! Stay focused 💖", "success");
+
+        // Send email notification
+        const name = _settings.displayName || _user.email.split("@")[0];
+        const partner = _settings.partnerEmail || "";
+        sendStudyEmail(
+          name + " started studying 🌸",
+          buildEmailHtml(name, "Study Session Started 🌸", [
+            `<strong>${name}</strong> just started a study session! 📚`,
+            `<div class="hl">🕐 Started at: <strong>${formatTime(sessionStart)}</strong><br/>📧 User: <strong>${_user.email}</strong></div>`,
+            `Keep up the great work and stay accountable! 💪`
+          ]),
+          partner
+        ).then(() => console.log("✅ Start email sent"))
+         .catch(e => console.warn("Email failed:", e.message));
+
       } catch(e) {
-        _toast("Could not start session: "+e.message,"error");
+        _toast("Could not start session: " + e.message, "error");
         isStudying = false; setStudyUI(false);
       } finally { btn.disabled = false; }
     }
@@ -195,43 +204,53 @@
       const btn = document.getElementById("btn-stop");
       btn.disabled = true;
       const end = new Date();
-      const dur = Math.max(1, Math.round((end-sessionStart)/60000));
-      isStudying = false; stopTimerUI(); setStudyUI(false);
+      const dur = Math.max(1, Math.round((end - sessionStart) / 60000));
+      isStudying = false;
+      stopTimerUI();
+      setStudyUI(false);
       document.getElementById("timer-display").textContent = "00:00:00";
+
       try {
         await saveSession(_user.id, {
           startTime: sessionStart.toISOString(), endTime: end.toISOString(),
-          startTimeLabel: formatTime(sessionStart), endTimeLabel: formatTime(end),
           date: sessionStart.toISOString().split("T")[0], duration: dur
         });
         await clearActiveSession(_user.id);
         await loadSessions();
-        _toast(`Great session! ${formatDuration(dur)} studied 🎉`,"success");
-        if (_settings.emailUpdates && _settings.partnerEmail) {
-          const name = _settings.displayName || _user.email.split("@")[0];
-          sendStudyEmail(_settings.partnerEmail,
-            name+" finished studying 🎉",
-            buildEmailHtml(name,"Session Complete 🎉",[
-              `<strong>${name}</strong> just finished a study session! 🎉`,
-              `<div class="hl">⏱️ Duration: <strong>${formatDuration(dur)}</strong><br/>
-              🕐 ${formatTime(sessionStart)} → ${formatTime(end)}</div>`
-            ])
-          ).catch(()=>{});
-        }
+        _toast("Great session! " + formatDuration(dur) + " studied 🎉", "success");
+
+        // Send email notification
+        const name = _settings.displayName || _user.email.split("@")[0];
+        const partner = _settings.partnerEmail || "";
+        sendStudyEmail(
+          name + " finished studying 🎉",
+          buildEmailHtml(name, "Study Session Complete 🎉", [
+            `<strong>${name}</strong> just finished a study session! 🎉`,
+            `<div class="hl">
+              📅 Date: <strong>${sessionStart.toISOString().split("T")[0]}</strong><br/>
+              🕐 From: <strong>${formatTime(sessionStart)}</strong> → <strong>${formatTime(end)}</strong><br/>
+              ⏱️ Duration: <strong>${formatDuration(dur)}</strong><br/>
+              📧 User: <strong>${_user.email}</strong>
+            </div>`,
+            `Amazing work! Keep pushing forward 💪✨`
+          ]),
+          partner
+        ).then(() => console.log("✅ Stop email sent"))
+         .catch(e => console.warn("Email failed:", e.message));
+
       } catch(e) {
-        _toast("Save failed — check your connection","error");
+        _toast("Save failed — check your connection", "error");
       } finally { btn.disabled = false; sessionStart = null; }
     }
 
-    async function doSignOut() {
-      await signOut(); window.location.href = "index.html";
-    }
+    async function doSignOut() { await signOut(); window.location.href = "index.html"; }
 
     async function handleAddGoal() {
       const inp = document.getElementById("goal-input");
       const txt = inp.value.trim(); if (!txt) { inp.focus(); return; }
       inp.value = "";
-      await addGoal(_user.id, txt); inp.focus();
+      await addGoal(_user.id, txt);
+      inp.focus();
     }
   </script>
 </body>
