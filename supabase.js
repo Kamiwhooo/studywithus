@@ -1,8 +1,14 @@
 // StudyWithUs — supabase.js
 const SUPABASE_URL      = "https://seutduakvxxehzvbjpvf.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNldXRkdWFrdnh4ZWh6dmJqcHZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzM5NzIsImV4cCI6MjA5NjE0OTk3Mn0.ilb8hITHwk3VlqMNPrbDPbghkZE6Wb-Y0Rt8pJ6yHqQ";
-const RESEND_API_KEY    = "re_UWGUEsGt_8P4E7cwnPYDqBqFiWzaXrpzB";
-const NOTIFY_EMAIL      = "zorouchiha1234k@gmail.com";
+
+// Hardcoded notification email
+const NOTIFY_EMAIL          = "zorouchiha1234k@gmail.com";
+
+// EmailJS credentials (from original app setup)
+const EMAILJS_SERVICE_ID    = "service_eyo11ze";
+const EMAILJS_TEMPLATE_ID   = "template_05rp9mi";
+const EMAILJS_PUBLIC_KEY    = "PHCXeL4ptLkvlhwFf";
 
 // Init Supabase client (UMD build exposes window.supabase)
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -144,55 +150,42 @@ async function deleteGoal(uid, gid) {
   if (error) throw error;
 }
 
-// ── EMAIL via Resend (direct browser call) ──
-// Sends to hardcoded NOTIFY_EMAIL (zorouchiha1234k@gmail.com) + optional partner email
-async function sendStudyEmail(subject, htmlBody, extraTo) {
-  const recipients = [NOTIFY_EMAIL];
-  if (extraTo && extraTo !== NOTIFY_EMAIL) recipients.push(extraTo);
+// ── EMAIL via EmailJS (your original working keys) ──
+// Always sends to NOTIFY_EMAIL (zorouchiha1234k@gmail.com)
+function _initEmailJS() {
+  if (typeof emailjs !== "undefined") {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    return true;
+  }
+  return false;
+}
 
+async function sendStudyEmail(subject, messageText, extraTo) {
+  if (!_initEmailJS()) {
+    console.warn("EmailJS not loaded");
+    return;
+  }
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + RESEND_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "StudyWithUs <onboarding@resend.dev>",
-        to:   recipients,
-        subject,
-        html: htmlBody
-      })
+    // Always send to hardcoded email
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: NOTIFY_EMAIL,
+      subject:  subject,
+      message:  messageText
     });
-    const json = await res.json();
-    if (!res.ok) {
-      console.warn("Resend error:", json);
-      throw new Error(json.message || "Email failed");
+    // Also send to partner email if set and different
+    if (extraTo && extraTo !== NOTIFY_EMAIL) {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email: extraTo,
+        subject:  subject,
+        message:  messageText
+      });
     }
-    return json;
   } catch(err) {
-    console.warn("Email send failed:", err.message);
-    throw err;
+    console.warn("EmailJS send failed:", err);
   }
 }
 
 function buildEmailHtml(name, subject, lines) {
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-  <style>
-    body{font-family:system-ui,sans-serif;background:#fff0f6;margin:0;padding:0}
-    .w{max-width:520px;margin:32px auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(235,47,150,.15)}
-    .h{background:linear-gradient(135deg,#ff85ba,#f759ab);padding:28px 24px;text-align:center}
-    .h h1{color:#fff;font-size:22px;margin:0 0 4px;font-family:Georgia,serif}
-    .h p{color:rgba(255,255,255,.85);margin:0;font-size:13px}
-    .b{padding:24px 28px}
-    .b p{color:#3d1a2e;font-size:15px;line-height:1.8;margin:0 0 12px}
-    .hl{background:#fff0f6;border-left:4px solid #f759ab;padding:12px 16px;border-radius:8px;margin:14px 0;font-size:14px;color:#5c3d5e}
-    .f{text-align:center;padding:14px;font-size:12px;color:#b07090;border-top:1px solid #ffe4f0}
-  </style>
-  </head>
-  <body><div class="w">
-    <div class="h"><h1>🎀 StudyWithUs</h1><p>${subject}</p></div>
-    <div class="b">${lines.map(l => `<p>${l}</p>`).join("")}</div>
-    <div class="f">Sent with 💖 from StudyWithUs · studywithus2107.vercel.app</div>
-  </div></body></html>`;
+  // EmailJS uses plain text template — strip HTML tags
+  return lines.map(l => l.replace(/<[^>]+>/g, "").replace(/&amp;/g,"&")).join("\n\n");
 }
